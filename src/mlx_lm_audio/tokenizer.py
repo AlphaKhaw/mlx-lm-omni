@@ -7,7 +7,6 @@ from mlx.nn.layers.base import Module
 from mlx.nn.layers.quantized import QuantizedEmbedding
 
 EXTENDED_EMBEDDING_THRESHOLD = 5000000
-AUDIO_SPECIAL_TOKEN = "<|audio|>"
 
 class ExtendedTokenizer(ABC):
     @abstractmethod

@@ -49,8 +49,6 @@ class TokenizerWithAudio(ExtendedTokenizer):
         self._tokenizer = tokenizer
         self._audio_special_token_id = self._tokenizer.encode(AUDIO_SPECIAL_TOKEN)
         
-        print(self._audio_special_token_id)
-        
     @property
     def eos_token_id(self) -> int:
         return self._tokenizer.eos_token_id
