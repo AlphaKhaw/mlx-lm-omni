@@ -3,17 +3,14 @@ import librosa
 from io import BytesIO
 from urllib.request import urlopen
 
-model, tokenizer = load("Qwen/Qwen2.5-Omni-3B")
+model, tokenizer = load("fixie-ai/ultravox-v0_5-llama-3_2-1b", model_config={"text_model_id": "unsloth/Llama-3.2-1B-Instruct"})
 
 audio_path = "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/1272-128104-0000.flac"
 audio = librosa.load(BytesIO(urlopen(audio_path).read()), sr=16000)[0]
 
 messages = [
-    {"role": "system", "content": [{"type": "text", "text": "You are a speech recognition model."}]},
-    {"role": "user", "content": [
-        {"type": "audio", "audio": audio},
-        {"type": "text", "text": "Transcribe the English audio into text without any punctuation marks."},
-    ]},
+    {"role": "system", "content": "You are a speech recognition model."},
+    {"role": "user", "content": "Transcribe the English audio into text without any punctuation marks.", "audio": audio},
 ]
 prompt = tokenizer.apply_chat_template(
     messages, add_generation_prompt=True

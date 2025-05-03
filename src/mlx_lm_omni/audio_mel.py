@@ -22,7 +22,7 @@ class AudioMel:
             cfg.sampling_rate, cfg.n_fft, n_mels=cfg.feature_size
         ).astype("float16")
 
-    def forward(self, waveform: np.ndarray) -> np.ndarray:
+    def __call__(self, waveform: np.ndarray) -> np.ndarray:
         """
         Compute the log-Mel spectrogram of the provided audio.
         """

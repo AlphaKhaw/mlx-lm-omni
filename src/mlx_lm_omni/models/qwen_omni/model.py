@@ -63,9 +63,9 @@ class TokenizerWithAudio(ExtendedTokenizer):
         return self._tokenizer.decode(tokens)
         
     def encode_audio(self, audio: np.ndarray) -> list[int]:
-        mel = self._audio_mel.forward(audio)
+        mel = self._audio_mel(audio)
         mel = mx.array(mel, dtype=mx.bfloat16)
-        audio_tower = self._audio_tower.forward(mel)
+        audio_tower = self._audio_tower(mel)
         return self._embeddings.embed_audio_chunk(audio_tower)
     
     def apply_chat_template(self, messages: list[dict], add_generation_prompt: bool = True) -> str:
