@@ -4,8 +4,8 @@ import mlx.core as mx
 from dataclasses import dataclass
 
 from mlx_lm.tokenizer_utils import TokenizerWrapper
-from mlx_lm_audio.audio_mel import AudioMel, AudioMelConfig
-from mlx_lm_audio.tokenizer import ExtendedEmbedding, ExtendedTokenizer, replace_slice
+from mlx_lm_omni.audio_mel import AudioMel, AudioMelConfig
+from mlx_lm_omni.tokenizer import ExtendedEmbedding, ExtendedTokenizer, replace_slice
 
 from .thinker import Thinker
 from .audio_tower import AudioTower
@@ -86,3 +86,6 @@ class TokenizerWithAudio(ExtendedTokenizer):
                     if isinstance(content, dict) and content.get('audio', None) is not None:
                         replace_slice(tokens, self._audio_special_token_id, content["audio"])
         return tokens
+    
+    def save_pretrained(self, path: str):
+        self._tokenizer.save_pretrained(path)

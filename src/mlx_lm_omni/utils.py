@@ -1,7 +1,7 @@
 import mlx.nn as nn
 from mlx_lm.utils import load_model, load_tokenizer, get_model_path, load_adapters
 from typing import Type, Tuple, Optional
-import mlx_lm_audio.models.qwen_omni.model as qwen_omni
+import mlx_lm_omni.models.qwen_omni.model as qwen_omni
 
 def get_model_classes(config: dict) -> Tuple[Type[nn.Module], Type]:
     match (config["model_type"]):
