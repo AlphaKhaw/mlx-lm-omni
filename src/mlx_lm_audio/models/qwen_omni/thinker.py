@@ -7,6 +7,6 @@ class Thinker(Model):
     def __init__(self, config: dict):
         args = ModelArgs.from_dict(config["text_config"])
         super().__init__(args)
-        self.embed_tokens = ExtendedEmbedding(args.vocab_size, args.hidden_size)
+        self.model.embed_tokens = ExtendedEmbedding(args.vocab_size, args.hidden_size)
         self.audio_tower = AudioTower(AudioTowerConfig.from_dict(config["audio_config"]))
         

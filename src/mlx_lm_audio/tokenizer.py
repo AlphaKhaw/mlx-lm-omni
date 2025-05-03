@@ -7,6 +7,7 @@ from mlx.nn.layers.base import Module
 from mlx.nn.layers.quantized import QuantizedEmbedding
 
 EXTENDED_EMBEDDING_THRESHOLD = 5000000
+AUDIO_SPECIAL_TOKEN = "<|audio|>"
 
 class ExtendedTokenizer(ABC):
     @abstractmethod
@@ -36,14 +37,14 @@ class ExtendedEmbedding(Module):
         return f"{self.weight.shape[0]}, {self.weight.shape[1]}"
 
     def __call__(self, inputs: mx.array) -> mx.array:
-                # split into chunks with value < 5000000 and > 5000000
+        # split into chunks with value < 5000000 and > 5000000
         embeddings = []
         chunk_normal = inputs[0][0] < EXTENDED_EMBEDDING_THRESHOLD
         chunk_begin = 0
         
         def add_chunk(begin, end):
             if chunk_normal:
-                embeddings.append(self.weight(inputs[:, begin:end]))
+                embeddings.append(self.weight[inputs[:, begin:end]])
             else:
                 extended_embedding = self.extended_embedding_queue.pop(0)
                 logging.info(f"[ExtendedEmbeddings] pop extended embeddings: {inputs[0][begin]} len {extended_embedding.shape[1]} vs {end - begin}")
@@ -88,3 +89,26 @@ class ExtendedEmbedding(Module):
         self.extended_embedding_seed += 1
         self.extended_embedding_queue.append(audio_embeddings)
         return extended_tokens
+    
+def replace_slice(lst, search, target):
+    """
+    Replaces the first occurrence of a sublist `search` in `lst` with the sublist `target`.
+
+    Args:
+        lst (list): The list to modify.
+        search (list): The slice to find and replace.
+        target (list): The replacement slice.
+
+    Returns:
+        bool: True if replacement was made, False if search not found.
+    """
+    n = len(search)
+    if n == 0:
+        return False
+
+    for i in range(len(lst) - n + 1):
+        if lst[i:i + n] == search:
+            lst[i:i + n] = target
+            return True
+
+    return False

@@ -72,15 +72,6 @@ class MultiHeadAttention(nn.Module):
         out = (w @ v).transpose(0, 2, 1, 3)
         out = out.reshape(n_batch, n_ctx, n_state)
         return out, qk
-    
-    def load_from_pytorch(self, weights: dict, prefix: str):
-        self.q_proj.weight = weights[f"{prefix}.q_proj.weight"]
-        self.q_proj.bias = weights[f"{prefix}.q_proj.bias"]
-        self.k_proj.weight = weights[f"{prefix}.k_proj.weight"]
-        self.v_proj.weight = weights[f"{prefix}.v_proj.weight"]
-        self.v_proj.bias = weights[f"{prefix}.v_proj.bias"]
-        self.out_proj.weight = weights[f"{prefix}.out_proj.weight"]
-        self.out_proj.bias = weights[f"{prefix}.out_proj.bias"]
 
 class ResidualAttentionBlock(nn.Module):
     def __init__(self, d_model: int, n_head: int, cross_attention: bool = False):
@@ -110,20 +101,6 @@ class ResidualAttentionBlock(nn.Module):
         x = self.fc2(x)
         x = x + residual
         return x, (kv, cross_kv), cross_qk
-    
-    def load_from_pytorch(self, weights: dict, prefix: str):
-        self.self_attn.load_from_pytorch(weights, f"{prefix}.self_attn")
-        self.self_attn_layer_norm.weight = weights[f"{prefix}.self_attn_layer_norm.weight"]
-        self.self_attn_layer_norm.bias = weights[f"{prefix}.self_attn_layer_norm.bias"]
-        if self.encoder_attn:
-            self.encoder_attn.load_from_pytorch(weights, f"{prefix}.encoder_attn")
-            self.encoder_attn_layer_norm.weight = weights[f"{prefix}.encoder_attn_layer_norm.weight"]
-        self.fc1.weight = weights[f"{prefix}.fc1.weight"]
-        self.fc1.bias = weights[f"{prefix}.fc1.bias"]
-        self.fc2.weight = weights[f"{prefix}.fc2.weight"]
-        self.fc2.bias = weights[f"{prefix}.fc2.bias"]
-        self.final_layer_norm.weight = weights[f"{prefix}.final_layer_norm.weight"]
-        self.final_layer_norm.bias = weights[f"{prefix}.final_layer_norm.bias"]
 
 class AudioTower(nn.Module):
     def __init__(self, cfg: AudioTowerConfig):
@@ -171,3 +148,11 @@ class AudioTower(nn.Module):
         x = self.ln_post(x)
         x = self.proj(x)
         return x
+
+    def update(self, weights: dict):
+        if weights["conv1"]['weight'].shape[1] == 128: # convert from pytorch to mlx
+            weights["conv1"]['weight'] = mx.swapaxes(weights["conv1"]['weight'], 1, 2)
+            weights["conv2"]['weight'] = mx.swapaxes(weights["conv2"]['weight'], 1, 2)
+        super().update(weights)
+        
+        

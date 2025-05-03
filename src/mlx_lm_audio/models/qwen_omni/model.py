@@ -1,16 +1,16 @@
+import numpy as np
 import mlx.nn as nn
 import mlx.core as mx
-from mlx_lm.utils import load_model, load_tokenizer, get_model_path, load_adapters
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Type
-from mlx_lm.tokenizer_utils import TokenizerWrapper
-import numpy as np
 
+from mlx_lm.tokenizer_utils import TokenizerWrapper
 from mlx_lm_audio.audio_mel import AudioMel, AudioMelConfig
+from mlx_lm_audio.tokenizer import ExtendedEmbedding, ExtendedTokenizer, replace_slice
 
 from .thinker import Thinker
 from .audio_tower import AudioTower
-from mlx_lm_audio.tokenizer import ExtendedEmbedding, ExtendedTokenizer
+
+AUDIO_SPECIAL_TOKEN = "<|AUDIO|>"
 
 @dataclass
 class ModelArgs:
@@ -47,6 +47,9 @@ class TokenizerWithAudio(ExtendedTokenizer):
         self._audio_tower = audio_tower
         self._embeddings = embeddings
         self._tokenizer = tokenizer
+        self._audio_special_token_id = self._tokenizer.encode(AUDIO_SPECIAL_TOKEN)
+        
+        print(self._audio_special_token_id)
         
     @property
     def eos_token_id(self) -> int:
@@ -63,8 +66,25 @@ class TokenizerWithAudio(ExtendedTokenizer):
         
     def encode_audio(self, audio: np.ndarray) -> list[int]:
         mel = self._audio_mel.forward(audio)
+        mel = mx.array(mel, dtype=mx.bfloat16)
         audio_tower = self._audio_tower.forward(mel)
         return self._embeddings.embed_audio_chunk(audio_tower)
     
     def apply_chat_template(self, messages: list[dict], add_generation_prompt: bool = True) -> str:
-        return self._tokenizer.apply_chat_template(messages, add_generation_prompt=add_generation_prompt)
+        # if the content is a list of audio, encode the audio
+        for message in messages:
+            if isinstance(message["content"], list):
+                for content in message["content"]:
+                    if isinstance(content, dict) and content["type"] == "audio":
+                        extended_tokens = self.encode_audio(content["audio"])
+                        content["audio"] = extended_tokens
+                        content["type"] = "text"
+                        content["text"] = f"<|audio_bos|>{AUDIO_SPECIAL_TOKEN}<|audio_eos|>"
+        
+        tokens = self._tokenizer.apply_chat_template(messages, add_generation_prompt=add_generation_prompt)
+        for message in messages:
+            if isinstance(message["content"], list):
+                for content in message["content"]:
+                    if isinstance(content, dict) and content.get('audio', None) is not None:
+                        replace_slice(tokens, self._audio_special_token_id, content["audio"])
+        return tokens
