@@ -16,12 +16,14 @@ Tested on MacBook M4-Pro (48GB RAM):
 | Qwen/Qwen2.5-Omni-3B                                                             | 468.4      | 38.8           |
 | giangndm/qwen2.5-omni-7b-mlx-4bit                                                | 259.2      | 57.6           |
 | giangndm/qwen2.5-omni-3b-mlx-8bit                                                | 456.2      | 67.0           |
-| fixie-ai/ultravox-v0_5-llama-3_1-8b and mlx-community/Llama-3.1-8B-Instruct-4bit | 188.5 tps  | 40.4 tps       |
+| fixie-ai/ultravox-v0_5-llama-3_1-8b and mlx-community/Llama-3.1-8B-Instruct-4bit | 188.5      | 40.4           |
 
 # How to use
 
 ```bash
-uv add mlx-lm-audio # or install directly from the git repo
+uv add mlx-lm-omni 
+# or
+uv add https://github.com/giangndm/mlx-lm-omni.git
 ```
 
 For Qwen2.5-Omni
