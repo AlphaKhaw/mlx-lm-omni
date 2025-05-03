@@ -3,7 +3,7 @@ import librosa
 from io import BytesIO
 from urllib.request import urlopen
 
-model, tokenizer = load("fixie-ai/ultravox-v0_5-llama-3_2-1b", model_config={"text_model_id": "unsloth/Llama-3.2-1B-Instruct"})
+model, tokenizer = load("fixie-ai/ultravox-v0_5-llama-3_1-8b", model_config={"text_model_id": "mlx-community/Llama-3.1-8B-Instruct-4bit"})
 
 audio_path = "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/1272-128104-0000.flac"
 audio = librosa.load(BytesIO(urlopen(audio_path).read()), sr=16000)[0]

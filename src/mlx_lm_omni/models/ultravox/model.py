@@ -11,6 +11,7 @@ from mlx_lm_omni.tokenizer import ExtendedEmbedding, ExtendedQuantizedEmbedding,
 
 from .audio_tower import AudioTower, AudioTowerArgs
 from .projector import Projector, ProjectorArgs
+from .thinker import get_thinker_classes
 
 AUDIO_SPECIAL_TOKEN = "<|reserved_special_token_0|>"
 
@@ -40,10 +41,7 @@ class Model(nn.Module):
         self.multi_modal_projector = Projector(args.projector_config)
         
         text_model_path = get_model_path(args.text_model_id)
-        text_model, text_config = load_model(text_model_path, lazy=True)
-        embed_tokens = ExtendedEmbedding(args.vocab_size, 2048) #TODO don't hardcode this
-        embed_tokens.weight = text_model.model.embed_tokens.weight
-        text_model.model.embed_tokens = embed_tokens
+        text_model, _text_config = load_model(text_model_path, lazy=True, get_model_classes=get_thinker_classes)
         self.text_model = text_model
 
     @property
