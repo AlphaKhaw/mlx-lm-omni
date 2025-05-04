@@ -26,41 +26,13 @@ uv add mlx-lm-omni
 uv add https://github.com/giangndm/mlx-lm-omni.git
 ```
 
-For Qwen2.5-Omni
-
 ```python
 from mlx_lm_omni import load, generate
 import librosa
 from io import BytesIO
 from urllib.request import urlopen
 
-model, tokenizer = load("giangndm/qwen2.5-omni-7b-mlx-4bit")
-
-audio_path = "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/1272-128104-0000.flac"
-audio = librosa.load(BytesIO(urlopen(audio_path).read()), sr=16000)[0]
-
-messages = [
-    {"role": "system", "content": [{"type": "text", "text": "You are a speech recognition model."}]},
-    {"role": "user", "content": [
-        {"type": "audio", "audio": audio},
-        {"type": "text", "text": "Transcribe the English audio into text without any punctuation marks."},
-    ]},
-]
-prompt = tokenizer.apply_chat_template(
-    messages, add_generation_prompt=True
-)
-
-text = generate(model, tokenizer, prompt=prompt, verbose=True)
-```
-
-For Ultravox 0.5
-
-```python
-from mlx_lm_omni import load, generate
-import librosa
-from io import BytesIO
-from urllib.request import urlopen
-
+# model, tokenizer = load("giangndm/qwen2.5-omni-7b-mlx-4bit")
 model, tokenizer = load("fixie-ai/ultravox-v0_5-llama-3_1-8b", model_config={"text_model_id": "mlx-community/Llama-3.1-8B-Instruct-4bit"})
 
 audio_path = "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/1272-128104-0000.flac"

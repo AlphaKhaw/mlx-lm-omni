@@ -99,8 +99,10 @@ class TokenizerWithAudio(ExtendedTokenizer):
         
         tokens = self._tokenizer.apply_chat_template(messages, add_generation_prompt=add_generation_prompt)
         for message in messages:
-            if message.get("audio", None) is not None:
-                replace_slice(tokens, self._audio_special_token_id, message["audio"])
+            if isinstance(message["content"], list):
+                for content in message["content"]:
+                    if isinstance(content, dict) and content.get('audio', None) is not None:
+                        replace_slice(tokens, self._audio_special_token_id, content["audio"])
         return tokens
     
     def save_pretrained(self, path: str):

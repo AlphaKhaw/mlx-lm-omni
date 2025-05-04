@@ -71,20 +71,18 @@ class TokenizerWithAudio(ExtendedTokenizer):
     def apply_chat_template(self, messages: list[dict], add_generation_prompt: bool = True) -> str:
         # if the content is a list of audio, encode the audio
         for message in messages:
-            if isinstance(message["content"], list):
-                for content in message["content"]:
-                    if isinstance(content, dict) and content["type"] == "audio":
-                        extended_tokens = self.encode_audio(content["audio"])
-                        content["audio"] = extended_tokens
-                        content["type"] = "text"
-                        content["text"] = f"<|audio_bos|>{AUDIO_SPECIAL_TOKEN}<|audio_eos|>"
+            if message.get("audio", None) is not None:
+                extended_tokens = self.encode_audio(message["audio"])
+                message["audio"] = extended_tokens
+                if AUDIO_SPECIAL_TOKEN not in message["content"]:
+                    message["content"] += f"<|audio_bos|>{AUDIO_SPECIAL_TOKEN}<|audio_eos|>"
+                elif f"<|audio_bos|>{AUDIO_SPECIAL_TOKEN}<|audio_eos|>" not in message["content"]:
+                    message["content"] = message["content"].replace(AUDIO_SPECIAL_TOKEN, f"<|audio_bos|>{AUDIO_SPECIAL_TOKEN}<|audio_eos|>")
         
         tokens = self._tokenizer.apply_chat_template(messages, add_generation_prompt=add_generation_prompt)
         for message in messages:
-            if isinstance(message["content"], list):
-                for content in message["content"]:
-                    if isinstance(content, dict) and content.get('audio', None) is not None:
-                        replace_slice(tokens, self._audio_special_token_id, content["audio"])
+            if message.get("audio", None) is not None:
+                replace_slice(tokens, self._audio_special_token_id, message["audio"])
         return tokens
     
     def save_pretrained(self, path: str):
