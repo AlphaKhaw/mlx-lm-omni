@@ -19,7 +19,7 @@ model, tokenizer = load(args.model, model_config={"text_model_id": args.text_mod
 kv_cache = make_prompt_cache(model)
 
 messages = [
-    {"role": "system", "content": "You are a helpful voice assistant, please listen carefully and summarize what user want to do in English. With name or other identification information, make sure to mention it. Response in Vietnamese."}
+    {"role": "system", "content": "You are a helpful voice assistant, please listen carefully and summarize what user want to do. With name or other identification information, make sure to mention it."}
 ]
 
 recorder = AudioRecorder()
