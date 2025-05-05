@@ -72,6 +72,10 @@ class TokenizerWithAudio(ExtendedTokenizer):
     def eos_token_id(self) -> int:
         return self._tokenizer.eos_token_id
     
+    @property
+    def eos_token_ids(self) -> list[int]:
+        return self._tokenizer.eos_token_ids
+    
     def clean_up_tokenization_spaces(self) -> int:
         return self._tokenizer.clean_up_tokenization_spaces()
 
@@ -99,10 +103,8 @@ class TokenizerWithAudio(ExtendedTokenizer):
         
         tokens = self._tokenizer.apply_chat_template(messages, add_generation_prompt=add_generation_prompt)
         for message in messages:
-            if isinstance(message["content"], list):
-                for content in message["content"]:
-                    if isinstance(content, dict) and content.get('audio', None) is not None:
-                        replace_slice(tokens, self._audio_special_token_id, content["audio"])
+            if message.get("audio", None) is not None:
+                replace_slice(tokens, self._audio_special_token_id, message["audio"])
         return tokens
     
     def save_pretrained(self, path: str):

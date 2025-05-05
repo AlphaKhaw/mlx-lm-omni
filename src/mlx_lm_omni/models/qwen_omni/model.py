@@ -53,6 +53,10 @@ class TokenizerWithAudio(ExtendedTokenizer):
     def eos_token_id(self) -> int:
         return self._tokenizer.eos_token_id
     
+    @property
+    def eos_token_ids(self) -> list[int]:
+        return self._tokenizer.eos_token_ids
+    
     def clean_up_tokenization_spaces(self) -> int:
         return self._tokenizer.clean_up_tokenization_spaces()
 
