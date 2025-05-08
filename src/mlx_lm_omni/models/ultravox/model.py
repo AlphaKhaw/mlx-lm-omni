@@ -3,11 +3,11 @@ import mlx.nn as nn
 import mlx.core as mx
 from dataclasses import dataclass
 
-from mlx_lm.tokenizer_utils import TokenizerWrapper
+from mlx_lm.tokenizer_utils import TokenizerWrapper, StreamingDetokenizer
 from mlx_lm.utils import load_model, get_model_path
 
 from mlx_lm_omni.audio_mel import AudioMel, AudioMelConfig
-from mlx_lm_omni.tokenizer import ExtendedEmbedding, ExtendedQuantizedEmbedding, ExtendedTokenizer, replace_slice
+from mlx_lm_omni.tokenizer import ExtendedEmbedding, ExtendedTokenizer, replace_slice
 
 from .audio_tower import AudioTower, AudioTowerArgs
 from .projector import Projector, ProjectorArgs
@@ -75,6 +75,10 @@ class TokenizerWithAudio(ExtendedTokenizer):
     @property
     def eos_token_ids(self) -> list[int]:
         return self._tokenizer.eos_token_ids
+    
+    @property
+    def detokenizer(self) -> StreamingDetokenizer:
+        return self._tokenizer.detokenizer
     
     def clean_up_tokenization_spaces(self) -> int:
         return self._tokenizer.clean_up_tokenization_spaces()

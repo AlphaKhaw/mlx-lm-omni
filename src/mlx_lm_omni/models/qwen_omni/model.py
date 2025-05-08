@@ -3,7 +3,7 @@ import mlx.nn as nn
 import mlx.core as mx
 from dataclasses import dataclass
 
-from mlx_lm.tokenizer_utils import TokenizerWrapper
+from mlx_lm.tokenizer_utils import TokenizerWrapper, StreamingDetokenizer
 from mlx_lm_omni.audio_mel import AudioMel, AudioMelConfig
 from mlx_lm_omni.tokenizer import ExtendedEmbedding, ExtendedTokenizer, replace_slice
 
@@ -57,6 +57,10 @@ class TokenizerWithAudio(ExtendedTokenizer):
     def eos_token_ids(self) -> list[int]:
         return self._tokenizer.eos_token_ids
     
+    @property
+    def detokenizer(self) -> StreamingDetokenizer:
+        return self._tokenizer.detokenizer
+    
     def clean_up_tokenization_spaces(self) -> int:
         return self._tokenizer.clean_up_tokenization_spaces()
 
@@ -81,7 +85,7 @@ class TokenizerWithAudio(ExtendedTokenizer):
                 if AUDIO_SPECIAL_TOKEN not in message["content"]:
                     message["content"] += f"<|audio_bos|>{AUDIO_SPECIAL_TOKEN}<|audio_eos|>"
                 elif f"<|audio_bos|>{AUDIO_SPECIAL_TOKEN}<|audio_eos|>" not in message["content"]:
-                    message["content"] = message["content"].replace(AUDIO_SPECIAL_TOKEN, f"<|audio_bos|>{AUDIO_SPECIAL_TOKEN}<|audio_eos|>")
+                    message["content"] = message["content"].replace(AUDIO_SPECIAL_TOKEN, f"Audio 1: <|audio_bos|>{AUDIO_SPECIAL_TOKEN}<|audio_eos|>")
         
         tokens = self._tokenizer.apply_chat_template(messages, add_generation_prompt=add_generation_prompt)
         for message in messages:

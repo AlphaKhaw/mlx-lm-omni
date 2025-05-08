@@ -4,11 +4,20 @@ import logging
 import numpy as np
 import math
 from mlx.nn.layers.base import Module
-from mlx.nn.layers.quantized import QuantizedEmbedding
+from mlx_lm.tokenizer_utils import StreamingDetokenizer
 
 EXTENDED_EMBEDDING_THRESHOLD = 5000000
 
 class ExtendedTokenizer(ABC):
+    @property
+    @abstractmethod
+    def detokenizer(self) -> StreamingDetokenizer:
+        pass
+    
+    @abstractmethod
+    def encode(self, text: str) -> list[int]:
+        pass
+    
     @abstractmethod
     def encode_audio(self, audio: np.ndarray) -> list[int]:
         pass
