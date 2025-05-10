@@ -6,6 +6,7 @@ from mlx_lm_omni import load, generate
 import librosa
 from io import BytesIO
 from urllib.request import urlopen
+from recorder import AudioRecorder
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', type=str, help='Path to the model')
@@ -13,26 +14,24 @@ parser.add_argument('--text-model-id', type=str, help='Override the text model i
 parser.add_argument('--single', type=str, help='Path to the input file, we will transcribe the input file')
 parser.add_argument('--folder', type=str, help='Path to the input folder, we will transcribe all files in the folder')
 parser.add_argument('--repl', type=str, help='Manual input mode, we will transcribe the input file in repl mode. Input as recording folder path')
+parser.add_argument('--language', type=str, help='Language of the audio file', default="Vietnamese")
 
 args = parser.parse_args()
 
 if args.model is None:
     args.model = "Qwen/Qwen2.5-Omni-3B"
 
-if args.single is None and args.folder is None and args.repl is None:
-    args.single = "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-Audio/audio/1272-128104-0000.flac"
-
 model, tokenizer = load(args.model, model_config={"text_model_id": args.text_model_id})
 
 def inference(audio: np.ndarray):
     messages = [
-        {"role": "system", "content": """You are a expert transcriber."""},
-        {"role": "user", "content": "Please transcribe it to text.", "audio": audio},
+        {"role": "system", "content": """You are a speech recognition model."""},
+        {"role": "user", "content": f"Transcribe the {args.language} audio into text without including any punctuation marks.", "audio": audio},
     ]
     prompt = tokenizer.apply_chat_template(
         messages, add_generation_prompt=True
     )
-    text = generate(model, tokenizer, prompt=prompt)
+    text = generate(model, tokenizer, prompt=prompt, max_tokens=1000, verbose=True)
     print(text)
     
 if args.single:
@@ -64,3 +63,15 @@ elif args.repl:
             inference(audio)
         except Exception as e:
             print(f"Error loading audio file: {e}")
+else:
+    recorder = AudioRecorder()
+    print("Press and hold SPACE to record audio. Release to stop recording.")
+    try:
+        while True:
+            audio, file_path = recorder.get_last_recording()
+            if audio is not None:
+                inference(audio)
+                
+    except KeyboardInterrupt:
+        print("\nExiting...") 
+        

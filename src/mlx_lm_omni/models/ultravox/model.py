@@ -42,14 +42,14 @@ class Model(nn.Module):
         
         text_model_path = get_model_path(args.text_model_id)
         text_model, _text_config = load_model(text_model_path, lazy=True, get_model_classes=get_thinker_classes)
-        self.text_model = text_model
+        self.thinker = text_model
 
     @property
     def layers(self) -> list[nn.Module]:
-        return self.text_model.layers
+        return self.thinker.layers
     
     def __call__(self, inputs: mx.array, cache = None) -> mx.array:
-        return self.text_model(inputs, cache=cache)
+        return self.thinker(inputs, cache=cache)
     
     def build_custom_tokenizer(self, tokenizer: TokenizerWrapper) -> ExtendedTokenizer:
         return TokenizerWithAudio(self.audio_tower, self.multi_modal_projector, tokenizer, self.text_model.model.embed_tokens)

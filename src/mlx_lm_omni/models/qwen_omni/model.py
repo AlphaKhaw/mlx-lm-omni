@@ -18,6 +18,7 @@ class ModelArgs:
     
     @staticmethod
     def from_dict(cfg: dict) -> "ModelArgs":
+        cfg["thinker_config"]["text_config"]["model_type"] = "qwen2"
         return ModelArgs(
             thinker_config=cfg["thinker_config"]
         )
