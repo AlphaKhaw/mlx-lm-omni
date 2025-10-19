@@ -84,6 +84,10 @@ class TokenizerWithAudio(ExtendedTokenizer):
         return self._tokenizer.unk_token_id
 
     @property
+    def chat_template(self) -> str:
+        return self._tokenizer.chat_template
+
+    @property
     def detokenizer(self) -> StreamingDetokenizer:
         return self._tokenizer.detokenizer
 
