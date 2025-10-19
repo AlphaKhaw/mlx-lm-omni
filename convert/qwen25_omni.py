@@ -1,7 +1,13 @@
 import os
-import mlx.nn as nn
 
-from mlx_lm.utils import upload_to_hub, save_config, load_config, get_model_path, create_model_card
+import mlx.nn as nn
+from mlx_lm.utils import (
+    create_model_card,
+    hf_repo_to_path,
+    load_config,
+    save_config,
+    upload_to_hub,
+)
 
 from mlx_lm_omni import load
 
@@ -11,7 +17,7 @@ output_repo = "giangndm/qwen2.5-omni-3b-mlx-8bit"
 group_size = 64
 bits = 8
 
-model_path = get_model_path(repo)
+model_path = hf_repo_to_path(repo)
 config = load_config(model_path)
 model, tokenizer = load(repo)
 
