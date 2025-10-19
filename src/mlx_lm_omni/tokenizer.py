@@ -1,26 +1,29 @@
-from abc import ABC, abstractmethod
-import mlx.core as mx
 import logging
-import numpy as np
 import math
+from abc import ABC, abstractmethod
+
+import mlx.core as mx
+import numpy as np
 from mlx.nn.layers.base import Module
 from mlx_lm.tokenizer_utils import StreamingDetokenizer
 
 EXTENDED_EMBEDDING_THRESHOLD = 5000000
+
 
 class ExtendedTokenizer(ABC):
     @property
     @abstractmethod
     def detokenizer(self) -> StreamingDetokenizer:
         pass
-    
+
     @abstractmethod
     def encode(self, text: str) -> list[int]:
         pass
-    
+
     @abstractmethod
     def encode_audio(self, audio: np.ndarray) -> list[int]:
         pass
+
 
 class ExtendedEmbedding(Module):
     """Implements a simple lookup table that maps each input integer to a
@@ -49,28 +52,32 @@ class ExtendedEmbedding(Module):
         embeddings = []
         chunk_normal = inputs[0][0] < EXTENDED_EMBEDDING_THRESHOLD
         chunk_begin = 0
-        
+
         def add_chunk(begin, end):
             if chunk_normal:
                 embeddings.append(self.weight[inputs[:, begin:end]])
             else:
                 extended_embedding = self.extended_embedding_queue.pop(0)
-                logging.info(f"[ExtendedEmbeddings] pop extended embeddings: {inputs[0][begin]} len {extended_embedding.shape[1]} vs {end - begin}")
+                logging.info(
+                    f"[ExtendedEmbeddings] pop extended embeddings: {inputs[0][begin]} len {extended_embedding.shape[1]} vs {end - begin}"
+                )
                 embeddings.append(extended_embedding)
-        
+
         for i in range(1, inputs.shape[1]):
             normal_token = inputs[0][i] < EXTENDED_EMBEDDING_THRESHOLD
             if chunk_normal != normal_token:
                 add_chunk(chunk_begin, i)
                 chunk_normal = not chunk_normal
                 chunk_begin = i
-            elif not chunk_normal and i > 0 and inputs[0][i] != inputs[0][i-1]: # multi continuous extended embeddings
+            elif (
+                not chunk_normal and i > 0 and inputs[0][i] != inputs[0][i - 1]
+            ):  # multi continuous extended embeddings
                 add_chunk(chunk_begin, i)
                 chunk_begin = i
 
         # add last chunk
         add_chunk(chunk_begin, inputs.shape[1])
-        
+
         if len(embeddings) > 1:
             return mx.concatenate(embeddings, axis=1)
         else:
@@ -85,10 +92,10 @@ class ExtendedEmbedding(Module):
         """
         return x @ self.weight.T
 
-    def to_quantized(self, group_size: int = 64, bits: int = 4):
+    def to_quantized(self, group_size: int = 64, bits: int = 4, mode: str = "affine"):
         """Return a :obj:`QuantizedEmbedding` layer that approximates this embedding layer."""
-        return ExtendedQuantizedEmbedding.from_embedding(self, group_size, bits)
-    
+        return ExtendedQuantizedEmbedding.from_embedding(self, group_size, bits, mode)
+
     def embed_audio_chunk(self, audio_embeddings: mx.array) -> list[int]:
         """
         Extend the embeddings to the original shape
@@ -97,7 +104,8 @@ class ExtendedEmbedding(Module):
         self.extended_embedding_seed += 1
         self.extended_embedding_queue.append(audio_embeddings)
         return extended_tokens
-    
+
+
 class ExtendedQuantizedEmbedding(Module):
     """The same as :obj:`Embedding` but with a  quantized weight matrix.
 
@@ -121,20 +129,27 @@ class ExtendedQuantizedEmbedding(Module):
         dims: int,
         group_size: int = 64,
         bits: int = 4,
+        mode: str = "affine",
     ):
         super().__init__()
 
         # Quantization config
         self.group_size = group_size
         self.bits = bits
+        self.mode = mode
 
         # Initialize the quantized weight
         scale = math.sqrt(1 / dims)
         weight = mx.random.normal(shape=(num_embeddings, dims), scale=scale)
-        self.weight, self.scales, self.biases = mx.quantize(weight, group_size, bits)
+        quantized_result = mx.quantize(weight, group_size, bits, mode)
+        if mode == "affine":
+            self.weight, self.scales, self.biases = quantized_result
+        else:  # mxfp4 mode
+            self.weight, self.scales = quantized_result
+            self.biases = None
         self.num_embeddings = num_embeddings
         self.dims = dims
-        
+
         self.extended_embedding_seed = EXTENDED_EMBEDDING_THRESHOLD
         self.extended_embedding_queue = []
 
@@ -146,35 +161,51 @@ class ExtendedQuantizedEmbedding(Module):
         embeddings = []
         chunk_normal = inputs[0][0] < EXTENDED_EMBEDDING_THRESHOLD
         chunk_begin = 0
-        
+
         def add_chunk(begin, end):
             if chunk_normal:
                 x = inputs[:, begin:end]
-                embeddings.append(mx.dequantize(
-                    self["weight"][x],
-                    scales=self["scales"][x],
-                    biases=self["biases"][x],
-                    group_size=self.group_size,
-                    bits=self.bits,
-                ))
+                if self.mode == "affine":
+                    embeddings.append(
+                        mx.dequantize(
+                            self["weight"][x],
+                            scales=self["scales"][x],
+                            biases=self["biases"][x],
+                            group_size=self.group_size,
+                            bits=self.bits,
+                        )
+                    )
+                else:  # mxfp4 mode
+                    embeddings.append(
+                        mx.dequantize(
+                            self["weight"][x],
+                            scales=self["scales"][x],
+                            group_size=self.group_size,
+                            bits=self.bits,
+                        )
+                    )
             else:
                 extended_embedding = self.extended_embedding_queue.pop(0)
-                logging.info(f"[ExtendedQuantizedEmbedding] pop extended embeddings: {inputs[0][begin]} len {extended_embedding.shape[1]} vs {end - begin}")
+                logging.info(
+                    f"[ExtendedQuantizedEmbedding] pop extended embeddings: {inputs[0][begin]} len {extended_embedding.shape[1]} vs {end - begin}"
+                )
                 embeddings.append(extended_embedding)
-        
+
         for i in range(1, inputs.shape[1]):
             normal_token = inputs[0][i] < EXTENDED_EMBEDDING_THRESHOLD
             if chunk_normal != normal_token:
                 add_chunk(chunk_begin, i)
                 chunk_normal = not chunk_normal
                 chunk_begin = i
-            elif not chunk_normal and i > 0 and inputs[0][i] != inputs[0][i-1]: # multi continuous extended embeddings
+            elif (
+                not chunk_normal and i > 0 and inputs[0][i] != inputs[0][i - 1]
+            ):  # multi continuous extended embeddings
                 add_chunk(chunk_begin, i)
                 chunk_begin = i
 
         # add last chunk
         add_chunk(chunk_begin, inputs.shape[1])
-        
+
         if len(embeddings) > 1:
             return mx.concatenate(embeddings, axis=1)
         else:
@@ -187,34 +218,51 @@ class ExtendedQuantizedEmbedding(Module):
         Use this for example when input embedding and output projection
         weights are tied.
         """
-        return mx.quantized_matmul(
-            x,
-            self["weight"],
-            scales=self["scales"],
-            biases=self["biases"],
-            transpose=True,
-            group_size=self.group_size,
-            bits=self.bits,
-        )
+        if self.mode == "affine":
+            return mx.quantized_matmul(
+                x,
+                self["weight"],
+                scales=self["scales"],
+                biases=self["biases"],
+                transpose=True,
+                group_size=self.group_size,
+                bits=self.bits,
+            )
+        else:  # mxfp4 mode
+            return mx.quantized_matmul(
+                x,
+                self["weight"],
+                scales=self["scales"],
+                transpose=True,
+                group_size=self.group_size,
+                bits=self.bits,
+            )
 
     def _extra_repr(self):
         return (
             f"{self.num_embeddings}, {self.dims}, "
-            f"group_size={self.group_size}, bits={self.bits}"
+            f"group_size={self.group_size}, bits={self.bits}, mode={self.mode}"
         )
 
     @classmethod
     def from_embedding(
-        cls, embedding_layer: Module, group_size: int = 64, bits: int = 4
+        cls,
+        embedding_layer: Module,
+        group_size: int = 64,
+        bits: int = 4,
+        mode: str = "affine",
     ):
         """Create a :obj:`QuantizedEmbedding` layer from an :obj:`Embedding` layer."""
         embedding_dims, dims = embedding_layer.weight.shape
-        ql = cls(embedding_dims, dims, group_size, bits)
-        ql.weight, ql.scales, ql.biases = mx.quantize(
-            embedding_layer.weight, group_size, bits
-        )
+        ql = cls(embedding_dims, dims, group_size, bits, mode)
+        quantized_result = mx.quantize(embedding_layer.weight, group_size, bits, mode)
+        if mode == "affine":
+            ql.weight, ql.scales, ql.biases = quantized_result
+        else:  # mxfp4 mode
+            ql.weight, ql.scales = quantized_result
+            ql.biases = None
         return ql
-    
+
     def embed_audio_chunk(self, audio_embeddings: mx.array) -> list[int]:
         """
         Extend the embeddings to the original shape
@@ -223,7 +271,8 @@ class ExtendedQuantizedEmbedding(Module):
         self.extended_embedding_seed += 1
         self.extended_embedding_queue.append(audio_embeddings)
         return extended_tokens
-    
+
+
 def replace_slice(lst, search, target):
     """
     Replaces the first occurrence of a sublist `search` in `lst` with the sublist `target`.
@@ -241,8 +290,8 @@ def replace_slice(lst, search, target):
         return False
 
     for i in range(len(lst) - n + 1):
-        if lst[i:i + n] == search:
-            lst[i:i + n] = target
+        if lst[i : i + n] == search:
+            lst[i : i + n] = target
             return True
 
     return False
