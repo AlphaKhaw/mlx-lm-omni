@@ -97,6 +97,18 @@ class TokenizerWithAudio(ExtendedTokenizer):
         return self._tokenizer.eos_token_ids
 
     @property
+    def vocab_size(self) -> int:
+        return self._tokenizer.vocab_size
+
+    @property
+    def pad_token_id(self) -> int:
+        return self._tokenizer.pad_token_id
+
+    @property
+    def unk_token_id(self) -> int:
+        return self._tokenizer.unk_token_id
+
+    @property
     def detokenizer(self) -> StreamingDetokenizer:
         return self._tokenizer.detokenizer
 
@@ -137,3 +149,7 @@ class TokenizerWithAudio(ExtendedTokenizer):
 
     def save_pretrained(self, path: str):
         self._tokenizer.save_pretrained(path)
+
+    def get_vocab(self) -> dict:
+        """Return the vocabulary dictionary mapping tokens to their IDs."""
+        return self._tokenizer.get_vocab()
